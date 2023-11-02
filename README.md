@@ -19,6 +19,8 @@ Instagram bulk profile media downloader
 - [x] download all videos
 - [x] download all thumbnails
 - [x] simple profile viewer
+- [] Add user pagenation (load-more-wrapper with-ads)
+- [x] Add tag search
 
 note: all content are saved with unique string names.
 
@@ -33,14 +35,15 @@ python main.py
 
 ### CLI usage
 
-- `-u`, `--username`: spesific instagram username
+- `-u`, `--username`: specific instagram username
+- `-t`, `--tags`: specific instagram tag
 - `-i`, `--images`: only download all images
 - `-v`, `--videos`: only download all videos
-- `-t`, `--thumbnails`: only download all thumbnails
+- `-tm`, `--thumbnails`: only download all thumbnails
 - `-a`, `--all`: download all media post from profile
 - `-V`, `--verbose`: enable debug mode
-
-output download saved in `./<username>/<images/videos/thumbnails>`
+- `-o`, `--output`: set output path
+- `-s`, `--sleep`: sleep between download
 
 ---
 
