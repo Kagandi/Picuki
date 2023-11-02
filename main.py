@@ -129,7 +129,6 @@ async def _download(**kwargs: Dict[str, str]) -> None:
                 Console().print(f"[green] SKipping.. [blue]{filename} [green] file exist!")
 
 def get_output_path(kwargs):
-    pdb.set_trace()
     output = os.path.join(os.path.realpath(kwargs.get(
         'output',
         './'
@@ -137,7 +136,6 @@ def get_output_path(kwargs):
         'username',
         'picuki_media'
     ))
-    pdb.set_trace()
     if not os.path.exists(output):
         try:
             os.makedirs(output)
@@ -241,7 +239,8 @@ async def _main(**kwargs):
                     if (content := await module.get_media_content(media)):
                         _media = content.pop('media')
                         show_table(content)
-                        await save_json(content=content, fname=f"{media}.json", type="content", output=output_folder)
+                        # pdb.set_trace()
+                        await save_json(content={**content, **_media}, fname=f"{media}.json", type="content", output=output_folder)
                     
                         if 'images' in selected:
                             if len(_media['images']) != 0:
