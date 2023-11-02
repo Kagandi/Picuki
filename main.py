@@ -9,12 +9,14 @@ from lib.Picuki import Picuki
 from lib.logger import logging, logger
 from argparse import ArgumentParser, RawTextHelpFormatter
 from typing import Dict, List
+import json
 from rich.console import Console
 from rich.panel import Panel
 from ssl import SSLWantReadError
 from aiohttp import ClientSession
 from pathlib import Path as PosixPath
 from humanize import naturalsize as get_natural_sizes
+import pdb
 import aiofiles, asyncio, os, re, random, time
 from rich.progress import (
     Progress, 
@@ -40,7 +42,31 @@ def get_valid_filename(url: str) -> str:
         "invalid url"
     )
     
-    
+
+# async with aiofiles.open('filename', mode='r') as f:
+#     async for line in f:
+#         print(line)
+
+async def save_json(**kwargs: Dict[str, str]) -> None:
+    content = kwargs.get('content')
+    fname = kwargs.get('fname')
+
+    media_type = kwargs.get('type')
+    output = get_output_path(kwargs)
+    # username = kwargs.get('username')
+
+    filename = os.path.join(
+        f"{output}/{media_type}",
+        fname
+    )
+    async with aiofiles.open(filename, "w") as f:
+        await f.write(
+            json.dumps(content)
+        )
+        await f.close()
+    Console().print(f"[green] Completed..saved as: [blue]{filename}")
+        
+
 async def _download(**kwargs: Dict[str, str]) -> None:
     """
     url: str = set url to download
@@ -52,26 +78,7 @@ async def _download(**kwargs: Dict[str, str]) -> None:
     assert url is not None, "stopped, nothing url to download!"
 
     media_type = kwargs.get('type')
-    output = os.path.join(os.path.realpath(kwargs.get(
-        'output',
-        './'
-    )), kwargs.get(
-        'username',
-        'picuki_media'
-    ))
-
-    if not os.path.exists(output):
-        try:
-            os.mkdir(output)
-            for folder in ('images', 'videos', 'thumbnails'):
-                folder_path = os.path.join(output, folder)
-                if not os.path.exists(folder_path):
-                    os.mkdir(folder_path)
-        except PermissionError:
-            logger.warning(
-                f"Directory output: {output} is not writeable!"
-            )
-            exit(1)
+    output = get_output_path(kwargs)
     
     filename = os.path.join(
         f"{output}/{media_type}",
@@ -120,6 +127,30 @@ async def _download(**kwargs: Dict[str, str]) -> None:
                 Console().print(f"[green] Completed..saved as: [blue]{filename}")
             else:
                 Console().print(f"[green] SKipping.. [blue]{filename} [green] file exist!")
+
+def get_output_path(kwargs):
+    pdb.set_trace()
+    output = os.path.join(os.path.realpath(kwargs.get(
+        'output',
+        './'
+    )), kwargs.get(
+        'username',
+        'picuki_media'
+    ))
+    pdb.set_trace()
+    if not os.path.exists(output):
+        try:
+            os.makedirs(output)
+            for folder in ('images', 'videos', 'thumbnails', 'profile', 'content'):
+                folder_path = os.path.join(output, folder)
+                if not os.path.exists(folder_path):
+                    os.mkdir(folder_path)
+        except PermissionError:
+            logger.warning(
+                f"Directory output: {output} is not writeable!"
+            )
+            exit(1)
+    return output
 
 def show_table(data: Dict[str, str], title: str = None) -> None:
     """
@@ -177,6 +208,8 @@ async def _main(**kwargs):
     """
     main: CLI handler
     """
+    sleep = kwargs.get('sleep')
+    output_folder = kwargs.get('output')
     if not kwargs.get('verbose'):
         logging.getLogger().setLevel(logging.INFO)
     
@@ -195,6 +228,7 @@ async def _main(**kwargs):
 
     if (profile := await module.get_profile(username)):
         page, result = profile
+        await save_json(content=result, fname=f"{username}.json", type="profile", output=output_folder)
         show_table(result)
 
         await module.get_media_id(page, logger)
@@ -207,6 +241,7 @@ async def _main(**kwargs):
                     if (content := await module.get_media_content(media)):
                         _media = content.pop('media')
                         show_table(content)
+                        await save_json(content=content, fname=f"{media}.json", type="content", output=output_folder)
                     
                         if 'images' in selected:
                             if len(_media['images']) != 0:
@@ -216,7 +251,8 @@ async def _main(**kwargs):
                                     await _download(
                                         url=img,
                                         username=username,
-                                        type="images"
+                                        type="images",
+                                        output=output_folder
                                     )
                             else:
                                 logger.warning('there no images to download!')
@@ -231,7 +267,8 @@ async def _main(**kwargs):
                                         await _download(
                                             url=vids.get('thumbnail'),
                                             username=username,
-                                            type="thumbnails"
+                                            type="thumbnails",
+                                            output=output_folder
                                         )
 
                                     if 'videos' in selected:
@@ -239,16 +276,17 @@ async def _main(**kwargs):
                                         await _download(
                                             url=vids.get('url'),
                                             username=username,
-                                            type="videos"
+                                            type="videos",
+                                            output=output_folder
                                         )
                             else:
                                 logger.warning("there's no videos or thumbnails to download..")
-                        time.sleep(1)
+                        time.sleep(sleep)
                     else:
                         logger.warning(f"cannot get content from media ID: {media}")
                 except (asyncio.exceptions.CancelledError, SSLWantReadError) as e:
                     logger.warning(f"Exception: {str(e)}, in media ID: {media}")
-                    time.sleep(1)
+                    time.sleep(sleep)
                     continue
             calculate_result(
                 username
@@ -261,7 +299,7 @@ async def _main(**kwargs):
 
 if __name__ == "__main__":
     parser = ArgumentParser(
-        description="\t\tPicuki.com\n  [ instagram bulk profile media downloader ]\n\t    @github.com/motebaya", 
+        description="\t\tPicuki.com\n  [ instagram bulk profile media downloader ]\n\t   based on @github.com/motebaya", 
         formatter_class=RawTextHelpFormatter
     )
     parser.add_argument("-u", "--username", help="spesific instagram username", metavar="")
@@ -269,6 +307,9 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--videos", help="just download all videos", action="store_true")
     parser.add_argument("-t", "--thumbnails", help="just download all videos thumbnails", action="store_true")
     parser.add_argument("-a", "--all", help="download all media", action="store_true")
+    parser.add_argument("-o", "--output", help="download all media", default=".")
+    parser.add_argument("-s", "--sleep", help="sleep between download", default=2, type=int)
+
     
     opt = parser.add_argument_group("Optional")
     opt.add_argument("-V", "--verbose", help="enable logger debug mode", action="store_true")
