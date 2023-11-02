@@ -227,6 +227,40 @@ class Picuki(AsyncClient):
             
         
             
-             
+    async def search_tags(self, tag: str) -> Union[Tuple[str, Dict[str, str]], None]:
+        page = await self.get(f"/tag/{tag}")
+
+        """
+        return if matched with regex
+        """
+        return page.text
+        # if (info := re.search(
+        #     r"(?<=name-top\">)(?P<username>[^>].*?)(?=</h1>)[\s\S]*?(?<=name-bottom\">)(?P<full_name>[^>].*?)(?=</h2>)[\s\S]*?(?<=description\">)\s+(?P<bio>[^>].*?)\s+(?=</div>)[\s\S]*?(?<=total_posts\">)(?P<total_posts>[\d+].*?)(?=</)[\s\S]*?(?<=followed_by\">)(?P<followers>[^>].*?)(?=</)[\s\S]*?(?<=follows\">)(?P<following>[^>].*?)(?=</)", page.text
+        # )):
+        #     return (
+        #         page.text,
+        #         info.groupdict()
+        #     )
+
+        # soup = self.parse(page.text)
+        # """
+        # do with bs4 if regex can't find it
+        # """
+        # if soup.find('ul', class_='.box-photos'):
+        #     return (page.text, dict(zip(
+        #         ('username', 'full_name',
+        #          'bio', 'total_posts',
+        #          'followers', 'following'),
+        #             (soup.find(class_=i).text.strip() for i in (
+        #                 "profile-name-top", "profile-name-bottom",
+        #                 "profile-description", "total_posts",
+        #                 "followed_by", "follows"))
+        #             )
+        #         ))
+
+        # """
+        # return nothing if profile not found
+        # """
+        # return None
              
              
